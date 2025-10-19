@@ -35,6 +35,10 @@
         }
       ]
     ],
+    "extra": {
+      "EXPO_PUBLIC_SUPABASE_URL": "https://qimiewqthuhmofjhzrrb.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpbWlld3F0aHVobW9mamh6cnJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1Mjc5MTMsImV4cCI6MjA3MTEwMzkxM30.jHY0m_l-uvwaZd-x9POEpLdoP__oLUdE-7U-E5mZqz0"
+    },
     "experiments": {
       "typedRoutes": true
     }
