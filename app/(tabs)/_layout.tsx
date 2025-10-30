@@ -33,6 +33,7 @@ export default function TabLayout() {
       <Tabs.Screen name="engine" options={{ title: 'Engine', tabBarIcon: ({ color }) => <IconSymbol name="gear" color={color} /> }} />
       <Tabs.Screen name="fuel" options={{ title: 'Fuel', tabBarIcon: ({ color }) => <IconSymbol name="fuelpump" color={color} /> }} />
       <Tabs.Screen name="emissions" options={{ title: 'Emissions', tabBarIcon: ({ color }) => <IconSymbol name="leaf" color={color} /> }} />
+      <Tabs.Screen name="log" options={{ title: 'Logs', tabBarIcon: ({ color }) => <IconSymbol name="clipboard" color={color} /> }} />
     </Tabs>
   );
 }

@@ -25,6 +25,9 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="settings" options={{ headerShown: false }} />
+          <Stack.Screen name="profile" options={{ headerShown: true, title: 'Profile', headerBackTitle: '' }} />
+          <Stack.Screen name="predictHealth" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />

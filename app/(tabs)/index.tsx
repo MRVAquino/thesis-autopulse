@@ -4,49 +4,32 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const accent = Colors.light.tint;
 
-  const dashboardItems = [
-    {
-      title: 'Engine Status',
-      description: 'Monitor engine performance and diagnostics',
-      icon: 'gear',
-      route: '/(tabs)/engine',
-      color: '#0a7ea4'
-    },
-    {
-      title: 'Fuel Management',
-      description: 'Track fuel consumption and efficiency',
-      icon: 'fuelpump',
-      route: '/(tabs)/fuel',
-      color: '#0a7ea4'
-    },
-    {
-      title: 'Emissions Tracking',
-      description: 'Monitor environmental impact and compliance',
-      icon: 'leaf',
-      route: '/(tabs)/emissions',
-      color: '#0a7ea4'
-    }
-  ];
-
-  const handleNavigation = (route: string) => {
-    router.push(route as any);
-  };
+  // ML data will come from Raspberry Pi - currently no data available
+  const mlHealthScorePercent: number | null = null;
+  const mlPrecisionLevel: 'normal' | 'medium' | 'low' | null = null;
+  const systemStatus: 'normal' | 'medium' | 'at risk' | null = null;
+  const troubleCodes: string[] | null = null;
+  // ML model input features (from Raspberry Pi)
+  const inputEngineRpm: number | null = null;
+  const inputCoolantTempC: number | null = null;
+  const inputEngineLoadPct: number | null = null;
+  const inputThrottlePositionPct: number | null = null; // NEW: Throttle Position
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.headerRow}>
         <View style={styles.brandRow}>
           <Ionicons name="car-sport" size={22} color={accent} />
           <ThemedText style={styles.brand}>AutoPulse</ThemedText>
         </View>
-        <Pressable accessibilityRole="button" onPress={() => router.push('/profile')} hitSlop={8}>
-          <Ionicons name="person-circle-outline" size={26} color="#2c3e50" />
+        <Pressable accessibilityRole="button" onPress={() => router.push('/settings' as any)} hitSlop={8}>
+          <Ionicons name="settings-outline" size={26} color="#2c3e50" />
         </Pressable>
       </View>
 
@@ -55,43 +38,330 @@ export default function HomeScreen() {
         <ThemedText style={styles.headerSubtitle}>Monitor your vehicle&apos;s performance</ThemedText>
       </View>
 
-      <View style={styles.dashboardGrid}>
-        {dashboardItems.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.dashboardCard}
-            onPress={() => handleNavigation(item.route)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
-              <IconSymbol name={item.icon as any} size={32} color="white" />
+      <View style={styles.panelContainer}>
+        <ThemedText type="subtitle" style={styles.panelTitle}>Random Forest ML Prediction</ThemedText>
+
+        <View style={styles.panelCard}>
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <IconSymbol name="speedometer" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>ML Health Score</ThemedText>
             </View>
-            <View style={styles.cardContent}>
-              <ThemedText type="subtitle" style={styles.cardTitle}>{item.title}</ThemedText>
-              <ThemedText style={styles.cardDescription}>{item.description}</ThemedText>
+            <ThemedText style={styles.healthScore}>
+              {mlHealthScorePercent !== null ? `${mlHealthScorePercent}%` : 'N/A'}
+            </ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <IconSymbol name="target" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>ML Precision</ThemedText>
             </View>
-            <IconSymbol name="chevron.right" size={20} color={Colors[colorScheme ?? 'light'].text} />
-          </TouchableOpacity>
-        ))}
+            {mlPrecisionLevel !== null ? (
+              <View style={[styles.badge, getPrecisionBadgeStyle(mlPrecisionLevel)]}>
+                <ThemedText style={[styles.badgeText, getBadgeTextStyle(mlPrecisionLevel)]}>
+                  {capitalize(mlPrecisionLevel)}
+                </ThemedText>
+              </View>
+            ) : (
+              <ThemedText style={styles.pendingText}>N/A</ThemedText>
+            )}
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <IconSymbol name="shield.checkerboard" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>System Status</ThemedText>
+            </View>
+            {systemStatus !== null ? (
+              <View style={[styles.badge, getStatusBadgeStyle(systemStatus)]}>
+                <ThemedText style={[styles.badgeText, getBadgeTextStyle(systemStatus)]}>
+                  {systemStatus === 'at risk' ? 'At Risk' : capitalize(systemStatus)}
+                </ThemedText>
+              </View>
+            ) : (
+              <ThemedText style={styles.pendingText}>N/A</ThemedText>
+            )}
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.troubleCodesSection}>
+            <View style={styles.troubleCodesHeader}>
+              <IconSymbol name="exclamationmark.triangle" size={22} color="#d35400" />
+              <ThemedText style={styles.troubleCodesTitle}>Trouble Codes</ThemedText>
+            </View>
+            {troubleCodes === null ? (
+              <ThemedText style={styles.troubleCodesEmpty}>Waiting for data from Raspberry Pi</ThemedText>
+            ) : Array.isArray(troubleCodes) && troubleCodes.length === 0 ? (
+              <ThemedText style={styles.troubleCodesEmpty}>No trouble codes detected</ThemedText>
+            ) : (
+              <View style={styles.troubleCodesList}>
+                {(troubleCodes as string[]).map((code: string, idx: number) => (
+                  <View key={idx} style={styles.troubleCodeBadge}>
+                    <ThemedText style={styles.troubleCodeText}>{code}</ThemedText>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
       </View>
 
-      <View style={styles.quickStats}>
-        <ThemedText type="subtitle" style={styles.statsTitle}>Quick Overview</ThemedText>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <IconSymbol name="speedometer" size={24} color="#0a7ea4" />
-            <ThemedText style={styles.statValue}>N/A</ThemedText>
-            <ThemedText style={styles.statLabel}>Engine Health</ThemedText>
+      <View style={styles.panelContainer}>
+        <ThemedText type="subtitle" style={styles.panelTitle}>ML Model Input Features</ThemedText>
+
+        <View style={styles.panelCard}>
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <IconSymbol name="gauge" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Engine RPM</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>
+              {inputEngineRpm !== null ? `${inputEngineRpm} rpm` : 'N/A'}
+            </ThemedText>
           </View>
-          <View style={styles.statCard}>
-            <IconSymbol name="gauge" size={24} color="#0a7ea4" />
-            <ThemedText style={styles.statValue}>N/A</ThemedText>
-            <ThemedText style={styles.statLabel}>Avg Consumption</ThemedText>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <IconSymbol name="thermometer" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Coolant Temp</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>
+              {inputCoolantTempC !== null ? `${inputCoolantTempC} °C` : 'N/A'}
+            </ThemedText>
           </View>
-          <View style={styles.statCard}>
-            <IconSymbol name="leaf" size={24} color="#0a7ea4" />
-            <ThemedText style={styles.statValue}>N/A</ThemedText>
-            <ThemedText style={styles.statLabel}>Emissions</ThemedText>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <IconSymbol name="speedometer" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Engine Load</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>
+              {inputEngineLoadPct !== null ? `${inputEngineLoadPct}%` : 'N/A'}
+            </ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+          
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <IconSymbol name="stats-chart" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Throttle Position</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>
+              {inputThrottlePositionPct !== null ? `${inputThrottlePositionPct}%` : 'N/A'}
+            </ThemedText>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.panelContainer}>
+        <ThemedText type="subtitle" style={styles.panelTitle}>Calculated Performances Metrics</ThemedText>
+        <View style={styles.panelCard}>
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="swap-vertical" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Load/RPM Ratio</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="thermometer-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Temp Gradient</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="flash-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Throttle Response</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="alert-circle-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Engine Stress</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.panelContainer}>
+        <ThemedText type="subtitle" style={styles.panelTitle}>Essential Sensor Readings</ThemedText>
+        <View style={styles.panelCard}>
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="speedometer-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Vehicle Speed</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="thermometer-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Intake Temp</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="trending-up-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Timing Advance</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="water-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>O2 Sensor</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="flame-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Catalyst Temp</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="cloud-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Baro Pressure</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.panelContainer}>
+        <ThemedText type="subtitle" style={styles.panelTitle}>Fuel System</ThemedText>
+        <View style={styles.panelCard}>
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="water" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Fuel Pressure</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="speedometer-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Fuel Efficiency</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="trending-up-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Short Fuel Trim</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="trending-down-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Long Fuel Trim</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="alert-circle-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Fuel System Status</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.panelContainer}>
+        <ThemedText type="subtitle" style={styles.panelTitle}>System Information</ThemedText>
+        <View style={styles.panelCard}>
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="battery-charging-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Control Module Voltage</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="time-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Engine Runtime</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="bug-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>EGR Error</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
+          </View>
+
+          <View style={styles.panelDivider} />
+
+          <View style={styles.panelRow}>
+            <View style={styles.panelRowLeft}>
+              <Ionicons name="document-text-outline" size={24} color="#0a7ea4" />
+              <ThemedText style={styles.panelRowLabel}>Session ID</ThemedText>
+            </View>
+            <ThemedText style={styles.healthScore}>N/A</ThemedText>
           </View>
         </View>
       </View>
@@ -139,16 +409,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7d86',
   },
-  dashboardGrid: {
+  panelContainer: {
     padding: 20,
-    gap: 16,
     backgroundColor: '#E9F1F6',
   },
-  dashboardCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    borderRadius: 14,
+  panelTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 12,
+    color: '#123B4A',
+  },
+  panelCard: {
+    padding: 16,
+    borderRadius: 12,
     backgroundColor: '#ffffff',
     shadowColor: '#000',
     shadowOpacity: 0.08,
@@ -157,66 +430,120 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E6E9ED',
   },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
+  panelRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
+    justifyContent: 'space-between',
+    paddingVertical: 8,
   },
-  cardContent: {
-    flex: 1,
+  panelRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  cardTitle: {
-    fontSize: 18,
+  panelRowLabel: {
+    fontSize: 16,
+    color: '#123B4A',
+    fontWeight: '600',
+  },
+  panelDivider: {
+    height: 1,
+    backgroundColor: '#E6E9ED',
+    marginVertical: 8,
+  },
+  healthScore: {
+    fontSize: 22,
     fontWeight: '800',
-    marginBottom: 4,
     color: '#123B4A',
   },
-  cardDescription: {
+  pendingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7d86',
+    fontStyle: 'italic',
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  troubleCodesSection: {
+    paddingTop: 4,
+  },
+  troubleCodesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  troubleCodesTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#123B4A',
+  },
+  troubleCodesEmpty: {
     fontSize: 14,
     color: '#6b7d86',
   },
-  quickStats: {
-    padding: 20,
-    paddingTop: 0,
-    backgroundColor: '#E9F1F6',
-  },
-  statsTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 16,
-    color: '#123B4A',
-  },
-  statsGrid: {
+  troubleCodesList: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  statCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
+  troubleCodeBadge: {
+    backgroundColor: '#F8F1E7',
+    borderColor: '#F0D7B8',
     borderWidth: 1,
-    borderColor: '#E6E9ED',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: 8,
-    marginBottom: 4,
-    color: '#123B4A',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6b7d86',
-    textAlign: 'center',
+  troubleCodeText: {
+    color: '#8E5A22',
+    fontWeight: '700',
   },
 });
+
+function capitalize<T extends string>(value: T): T {
+  return (value.charAt(0).toUpperCase() + value.slice(1)) as T;
+}
+
+function getPrecisionBadgeStyle(level: 'normal' | 'medium' | 'low') {
+  switch (level) {
+    case 'normal':
+      return { backgroundColor: '#E8F6F0', borderColor: '#BFE7D7' };
+    case 'medium':
+      return { backgroundColor: '#FFF6E6', borderColor: '#F9DFB7' };
+    case 'low':
+      return { backgroundColor: '#FDEDEC', borderColor: '#F5B7B1' };
+  }
+}
+
+function getStatusBadgeStyle(level: 'normal' | 'medium' | 'at risk') {
+  switch (level) {
+    case 'normal':
+      return { backgroundColor: '#E8F6F0', borderColor: '#BFE7D7' };
+    case 'medium':
+      return { backgroundColor: '#FFF6E6', borderColor: '#F9DFB7' };
+    case 'at risk':
+      return { backgroundColor: '#FDEDEC', borderColor: '#F5B7B1' };
+  }
+}
+
+function getBadgeTextStyle(level: 'normal' | 'medium' | 'low' | 'at risk') {
+  switch (level) {
+    case 'normal':
+      return { color: '#136A50' };
+    case 'medium':
+      return { color: '#8A6D3B' };
+    case 'low':
+    case 'at risk':
+      return { color: '#8B2F2B' };
+  }
+}

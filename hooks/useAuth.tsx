@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 type AuthUser = {
   id: string;
@@ -112,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Password must be at least 6 characters');
     }
 
+    // Step 1: Create the user in Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: identifier.trim(),
       password,
@@ -123,6 +124,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const sUser = data.user;
     const session = data.session;
+
+    // Step 2: Upsert (insert or update) a user profile entry in the public.users table
+    if (sUser && sUser.id) {
+      try {
+        const { error: profileError } = await supabase
+          .from('users')
+          .upsert({
+            id: sUser.id,
+            email: identifier.trim(),
+            username: identifier.trim().split('@')[0],
+            role: 'user',
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+
+        if (profileError) {
+          console.error('Error upserting user profile:', profileError);
+        }
+      } catch (profileError) {
+        console.error('Error upserting user profile:', profileError);
+      }
+    }
+
     if (session && sUser) {
       setUser({ id: sUser.id, email: sUser.email });
       setIsAuthenticated(true);
